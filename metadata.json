@@ -1,0 +1,8 @@
+{
+  "name": "EventSeat Planner",
+  "description": "Easily organize your birthday guest list and assign specific seats for up to 20 people with a visual layout.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
