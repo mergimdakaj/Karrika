@@ -82,14 +82,17 @@ export const SeatInspectorPanel: React.FC<SeatInspectorPanelProps> = ({
     setTimeout(() => setNoticeMessage(null), 3000);
   };
 
-  const totalSeats = allSeats.length;
-  const halfSeats = Math.ceil(totalSeats / 2);
+  const currentIndex = allSeats.findIndex((s) => s.id === seat.id);
+  const prevSeat = allSeats[(currentIndex - 1 + allSeats.length) % allSeats.length];
+  const nextSeat = allSeats[(currentIndex + 1) % allSeats.length];
+  const prevSeatId = prevSeat ? prevSeat.id : seat.id;
+  const nextSeatId = nextSeat ? nextSeat.id : seat.id;
 
-  const prevSeatId = seat.id === 1 ? totalSeats : seat.id - 1;
-  const nextSeatId = seat.id === totalSeats ? 1 : seat.id + 1;
-
+  const seatSide = seat.side || (seat.id <= 10 ? 'top' : 'bottom');
   const getSeatPositionLabel = (id: number) => {
-    return `Karriga Anash #${String(id).padStart(2, '0')}`;
+    return seatSide === 'top'
+      ? `Ana e Sipërme (Lart) · #${String(id).padStart(2, '0')}`
+      : `Ana e Poshtme (Poshtë) · #${String(id).padStart(2, '0')}`;
   };
 
   const drinksList = seat.drinks || [];

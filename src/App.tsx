@@ -60,7 +60,10 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          return parsed.map((s: Seat, idx: number) => ({
+            ...s,
+            side: s.side || (s.id <= 10 ? 'top' : 'bottom'),
+          }));
         }
       }
     } catch {
@@ -102,7 +105,9 @@ export default function App() {
   }, [eventDetails]);
 
   const totalSeats = seats.length;
-  const halfSeats = Math.ceil(totalSeats / 2);
+  const topSeats = seats.filter((s) => (s.side ? s.side === 'top' : s.id <= 10));
+  const bottomSeats = seats.filter((s) => (s.side ? s.side === 'bottom' : s.id > 10));
+  const halfSeats = topSeats.length;
   const selectedSeat = seats.find((s) => s.id === selectedSeatId) || seats[0];
   const assignedCount = seats.filter((s) => s.name.trim().length > 0).length;
   const emptyCount = totalSeats - assignedCount;
@@ -324,28 +329,42 @@ export default function App() {
 
     const removedId = seatToRemove.id;
     const removedName = seatToRemove.name.trim() ? ` (${seatToRemove.name})` : '';
+    const seatSide = seatToRemove.side || (removedId <= 10 ? 'top' : 'bottom');
 
     setSeats((prev) => {
-      const remaining = prev.filter((s) => s.id !== removedId);
-      return remaining.map((s, idx) => ({ ...s, id: idx + 1 }));
+      return prev.filter((s) => s.id !== removedId);
     });
 
     setSelectedSeatId((prevId) => {
-      if (prevId === removedId) return 1;
-      if (prevId > removedId) return prevId - 1;
+      if (prevId === removedId) {
+        const remaining = seats.filter((s) => s.id !== removedId);
+        return remaining[0]?.id || 1;
+      }
       return prevId;
     });
 
-    setSaveStatusMessage(`✓ Karriga #${removedId}${removedName} u hoq nga skema vizuale! Mbetën ${seats.length - 1} karrige.`);
+    const sideName = seatSide === 'top' ? 'lart' : 'poshtë';
+    const remainingTop = seats.filter(
+      (s) => (s.side ? s.side === 'top' : s.id <= 10) && s.id !== removedId
+    ).length;
+    const remainingBottom = seats.filter(
+      (s) => (s.side ? s.side === 'bottom' : s.id > 10) && s.id !== removedId
+    ).length;
+
+    setSaveStatusMessage(
+      `✓ Karriga #${String(removedId).padStart(2, '0')}${removedName} (${sideName}) u hoq! Mbetën ${remainingTop} lart dhe ${remainingBottom} poshtë.`
+    );
     setTimeout(() => setSaveStatusMessage(null), 3500);
     return true;
   };
 
-  const handleAddSeat = () => {
+  const handleAddSeat = (targetSide: 'top' | 'bottom' = 'top') => {
     setSeats((prev) => {
-      const newId = prev.length + 1;
+      const maxId = prev.reduce((max, s) => Math.max(max, s.id), 0);
+      const newId = maxId + 1;
       const newSeat: Seat = {
         id: newId,
+        side: targetSide,
         name: '',
         role: 'miqte',
         dietary: 'klasike',
@@ -356,14 +375,32 @@ export default function App() {
       };
       return [...prev, newSeat];
     });
-    setSaveStatusMessage(`✓ U shtua një karrige e re! Gjithsej ${seats.length + 1} karrige.`);
+    setSaveStatusMessage(`✓ U shtua një karrige e re ${targetSide === 'top' ? 'lart' : 'poshtë'}!`);
     setTimeout(() => setSaveStatusMessage(null), 3000);
   };
 
   const handleResetTo20Seats = () => {
     setSeats(getSampleSeats(20));
     setSelectedSeatId(1);
-    setSaveStatusMessage('✓ U rikthyen të 20 karriget e plota.');
+    setSaveStatusMessage('✓ U rikthyen të 20 karriget (10 lart dhe 10 poshtë).');
+    setTimeout(() => setSaveStatusMessage(null), 3000);
+  };
+
+  const handleRenumberSeats = () => {
+    setSeats((prev) => {
+      const top = prev.filter((s) => (s.side ? s.side === 'top' : s.id <= 10));
+      const bottom = prev.filter((s) => (s.side ? s.side === 'bottom' : s.id > 10));
+
+      const renumberedTop = top.map((s, idx) => ({ ...s, id: idx + 1, side: 'top' as const }));
+      const renumberedBottom = bottom.map((s, idx) => ({
+        ...s,
+        id: top.length + idx + 1,
+        side: 'bottom' as const,
+      }));
+
+      return [...renumberedTop, ...renumberedBottom];
+    });
+    setSaveStatusMessage('✓ Numrat e karrigeve u rinumëruan me radhë (1..N).');
     setTimeout(() => setSaveStatusMessage(null), 3000);
   };
 
@@ -771,6 +808,7 @@ export default function App() {
               onRemoveSeat={handleRemoveSeat}
               onAddSeat={handleAddSeat}
               onResetSeats={handleResetTo20Seats}
+              onRenumberSeats={handleRenumberSeats}
             />
 
             {/* Bottom Controls: Seat Inspector */}

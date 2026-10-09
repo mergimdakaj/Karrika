@@ -53,10 +53,11 @@ export const GuestListView: React.FC<GuestListViewProps> = ({
     return matchesRole && matchesSearch;
   });
 
-  const halfSeats = Math.ceil(seats.length / 2);
   const getZoneLabel = (id: number) => {
-    if (id <= halfSeats) return `Ana e Sipërme (#${String(id).padStart(2, '0')})`;
-    return `Ana e Poshtme (#${String(id).padStart(2, '0')})`;
+    const s = seats.find((item) => item.id === id);
+    const isTop = s ? (s.side ? s.side === 'top' : s.id <= 10) : id <= 10;
+    if (isTop) return `Ana e Sipërme (Lart) · #${String(id).padStart(2, '0')}`;
+    return `Ana e Poshtme (Poshtë) · #${String(id).padStart(2, '0')}`;
   };
 
   return (

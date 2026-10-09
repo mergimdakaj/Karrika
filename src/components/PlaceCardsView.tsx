@@ -98,7 +98,7 @@ export const PlaceCardsView: React.FC<PlaceCardsViewProps> = ({
                 <span>{DIETARY_LABELS[seat.dietary]}</span>
                 <span aria-hidden="true">·</span>
                 <span className="font-mono tabular-nums">
-                  {seat.id <= half ? 'Lart' : 'Poshtë'} #{String(seat.id).padStart(2, '0')}
+                  {(seat.side ? seat.side === 'top' : seat.id <= 10) ? 'Lart' : 'Poshtë'} #{String(seat.id).padStart(2, '0')}
                 </span>
               </div>
             </div>

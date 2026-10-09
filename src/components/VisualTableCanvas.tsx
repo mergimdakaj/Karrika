@@ -45,8 +45,9 @@ interface VisualTableCanvasProps {
   onOpenOrderModal: (id: number) => void;
   onSaveFormat?: () => void;
   onRemoveSeat?: (target: string | number) => boolean;
-  onAddSeat?: () => void;
+  onAddSeat?: (side?: 'top' | 'bottom') => void;
   onResetSeats?: () => void;
+  onRenumberSeats?: () => void;
 }
 
 const ROLE_ACCENT_STYLES: Record<
@@ -106,12 +107,17 @@ export const VisualTableCanvas: React.FC<VisualTableCanvasProps> = ({
   onRemoveSeat,
   onAddSeat,
   onResetSeats,
+  onRenumberSeats,
 }) => {
   const inputRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const [draggedSeatId, setDraggedSeatId] = React.useState<number | null>(null);
   const [dragOverSeatId, setDragOverSeatId] = React.useState<number | null>(null);
   const [scaleMode, setScaleMode] = React.useState<'photo' | 'compact' | 'normal'>('photo');
   const [removeInput, setRemoveInput] = React.useState('');
+
+  const topRow = seats.filter((s) => (s.side ? s.side === 'top' : s.id <= 10));
+  const bottomRow = seats.filter((s) => (s.side ? s.side === 'bottom' : s.id > 10));
+  const totalSeats = seats.length;
 
   const handleRemoveSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,14 +128,12 @@ export const VisualTableCanvas: React.FC<VisualTableCanvasProps> = ({
     }
   };
 
-  const totalSeats = seats.length;
-  const halfSeats = Math.ceil(totalSeats / 2);
-
-  const focusSeatInput = (id: number) => {
-    const nextId = id > totalSeats ? 1 : id < 1 ? totalSeats : id;
-    onSelectSeat(nextId);
+  const focusSeatInput = (targetId: number) => {
+    const target = seats.find((s) => s.id === targetId) || seats[0];
+    if (!target) return;
+    onSelectSeat(target.id);
     setTimeout(() => {
-      const el = inputRefs.current[nextId];
+      const el = inputRefs.current[target.id];
       if (el) {
         el.focus();
         el.select();
@@ -138,21 +142,31 @@ export const VisualTableCanvas: React.FC<VisualTableCanvasProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, seatId: number) => {
-    if (e.key === 'Enter') {
+    const currentIdx = seats.findIndex((s) => s.id === seatId);
+    if (e.key === 'Enter' || e.key === 'ArrowRight') {
       e.preventDefault();
-      focusSeatInput(seatId + 1);
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      focusSeatInput(seatId <= halfSeats ? seatId + halfSeats : seatId - halfSeats);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      focusSeatInput(seatId > halfSeats ? seatId - halfSeats : seatId + halfSeats);
-    } else if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      focusSeatInput(seatId + 1);
+      const nextSeat = seats[(currentIdx + 1) % seats.length];
+      if (nextSeat) focusSeatInput(nextSeat.id);
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      focusSeatInput(seatId - 1);
+      const prevSeat = seats[(currentIdx - 1 + seats.length) % seats.length];
+      if (prevSeat) focusSeatInput(prevSeat.id);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const curSeat = seats[currentIdx];
+      if (curSeat && (curSeat.side === 'top' || curSeat.id <= 10)) {
+        const topIdx = topRow.findIndex((s) => s.id === seatId);
+        const correspondingBottom = bottomRow[Math.min(topIdx, bottomRow.length - 1)];
+        if (correspondingBottom) focusSeatInput(correspondingBottom.id);
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const curSeat = seats[currentIdx];
+      if (curSeat && (curSeat.side === 'bottom' || curSeat.id > 10)) {
+        const botIdx = bottomRow.findIndex((s) => s.id === seatId);
+        const correspondingTop = topRow[Math.min(botIdx, topRow.length - 1)];
+        if (correspondingTop) focusSeatInput(correspondingTop.id);
+      }
     }
   };
 
@@ -336,9 +350,9 @@ export const VisualTableCanvas: React.FC<VisualTableCanvasProps> = ({
                     e.stopPropagation();
                     onRemoveSeat(seat.id);
                   }}
-                  className="p-0.5 rounded text-[#78716C] opacity-0 group-hover:opacity-100 hover:text-[#DC2626] hover:bg-[#FEF2F2] transition-colors"
+                  className="p-1 rounded text-[#DC2626] hover:text-white hover:bg-[#DC2626] bg-[#FEF2F2] border border-[#FECACA] transition-colors cursor-pointer"
                 >
-                  <Trash2 className="w-3 h-3 text-[#DC2626]" />
+                  <Trash2 className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                 </button>
               )}
               {isEmpty && (
@@ -506,7 +520,7 @@ export const VisualTableCanvas: React.FC<VisualTableCanvasProps> = ({
             <div className="text-[10px] sm:text-[11px] font-medium text-[#8C6227] flex items-center gap-1.5">
               <span>{centerpiece === 'torta-dhe-qirinj' ? 'Torta Festive & Qirinjtë' : centerpiece === 'lule-festive' ? 'Aranzhim Lulesh' : 'Dolli me Shampanjë'}</span>
               <span aria-hidden="true">·</span>
-              <span className="font-mono tabular-nums">{totalSeats} Karrige</span>
+              <span className="font-mono tabular-nums">{totalSeats} Karrige ({topRow.length} Lart · {bottomRow.length} Poshtë)</span>
             </div>
             <h3 className="font-display text-xs sm:text-base font-semibold text-[#1C1917] leading-snug">
               {eventTitle || 'Darka e Ditëlindjes'}
@@ -541,20 +555,38 @@ export const VisualTableCanvas: React.FC<VisualTableCanvasProps> = ({
 
   // LAYOUT 1: SIDES PARALLEL (TË GJITHA ANASH — PA KARRIGE NË MES APO SKAJE)
   const renderSidesParallelTable = () => {
-    const topRow = seats.slice(0, halfSeats);
-    const bottomRow = seats.slice(halfSeats, totalSeats);
-
     return (
       <div className="w-full overflow-x-auto pb-4 pt-2">
         <div className={`mx-auto flex flex-col items-center py-2 px-1 sm:px-3 ${
           scaleMode === 'normal' ? 'min-w-[1100px]' : 'w-full max-w-[1140px]'
         }`}>
+          {/* Top Row Label & Shto Lart button */}
+          <div className="w-full max-w-[1140px] flex items-center justify-between px-2 mb-1.5">
+            <span className="text-[11px] font-semibold text-[#8C6227] flex items-center gap-1.5">
+              <span>Ana e Sipërme (Lart)</span>
+              <span className="px-2 py-0.5 rounded-md bg-[#F5EBE1] text-[#9F2B2B] font-mono text-[10px] font-bold">
+                {topRow.length} karrige
+              </span>
+            </span>
+            {onAddSeat && (
+              <button
+                type="button"
+                onClick={() => onAddSeat('top')}
+                className="text-[10px] font-semibold text-[#2E5A44] hover:text-[#166534] bg-[#EDF7F1] hover:bg-[#DCF2E5] px-2 py-0.5 rounded-md border border-[#BBF7D0] transition-colors flex items-center gap-1 cursor-pointer"
+                title="Shto karrige në anën e sipërme (Lart)"
+              >
+                <Plus className="w-2.5 h-2.5" />
+                <span>+ Shto Lart</span>
+              </button>
+            )}
+          </div>
+
           {/* Top Row of Chairs */}
           <div
             className={`grid gap-1 sm:gap-2 w-full mb-2 ${
               scaleMode === 'normal' ? 'max-w-[1200px]' : 'max-w-[1140px]'
             }`}
-            style={{ gridTemplateColumns: `repeat(${topRow.length}, minmax(0, 1fr))` }}
+            style={{ gridTemplateColumns: `repeat(${Math.max(topRow.length, 1)}, minmax(0, 1fr))` }}
           >
             {topRow.map((seat) => renderChairNode(seat, 'top'))}
           </div>
@@ -568,7 +600,7 @@ export const VisualTableCanvas: React.FC<VisualTableCanvasProps> = ({
             {/* Top Place Settings */}
             <div
               className="grid gap-1 sm:gap-2 mb-2 sm:mb-3 relative z-10"
-              style={{ gridTemplateColumns: `repeat(${topRow.length}, minmax(0, 1fr))` }}
+              style={{ gridTemplateColumns: `repeat(${Math.max(topRow.length, 1)}, minmax(0, 1fr))` }}
             >
               {topRow.map((seat) => renderPlaceSetting(seat))}
             </div>
@@ -583,18 +615,39 @@ export const VisualTableCanvas: React.FC<VisualTableCanvasProps> = ({
             {/* Bottom Place Settings */}
             <div
               className="grid gap-1 sm:gap-2 mt-2 sm:mt-3 relative z-10"
-              style={{ gridTemplateColumns: `repeat(${bottomRow.length}, minmax(0, 1fr))` }}
+              style={{ gridTemplateColumns: `repeat(${Math.max(bottomRow.length, 1)}, minmax(0, 1fr))` }}
             >
               {bottomRow.map((seat) => renderPlaceSetting(seat))}
             </div>
           </div>
 
+          {/* Bottom Row Label & Shto Poshtë button */}
+          <div className="w-full max-w-[1140px] flex items-center justify-between px-2 mt-2.5 mb-1.5">
+            <span className="text-[11px] font-semibold text-[#8C6227] flex items-center gap-1.5">
+              <span>Ana e Poshtme (Poshtë)</span>
+              <span className="px-2 py-0.5 rounded-md bg-[#F5EBE1] text-[#9F2B2B] font-mono text-[10px] font-bold">
+                {bottomRow.length} karrige
+              </span>
+            </span>
+            {onAddSeat && (
+              <button
+                type="button"
+                onClick={() => onAddSeat('bottom')}
+                className="text-[10px] font-semibold text-[#2E5A44] hover:text-[#166534] bg-[#EDF7F1] hover:bg-[#DCF2E5] px-2 py-0.5 rounded-md border border-[#BBF7D0] transition-colors flex items-center gap-1 cursor-pointer"
+                title="Shto karrige në anën e poshtme (Poshtë)"
+              >
+                <Plus className="w-2.5 h-2.5" />
+                <span>+ Shto Poshtë</span>
+              </button>
+            )}
+          </div>
+
           {/* Bottom Row of Chairs */}
           <div
-            className={`grid gap-1 sm:gap-2 w-full mt-2 ${
+            className={`grid gap-1 sm:gap-2 w-full mt-1 ${
               scaleMode === 'normal' ? 'max-w-[1200px]' : 'max-w-[1140px]'
             }`}
-            style={{ gridTemplateColumns: `repeat(${bottomRow.length}, minmax(0, 1fr))` }}
+            style={{ gridTemplateColumns: `repeat(${Math.max(bottomRow.length, 1)}, minmax(0, 1fr))` }}
           >
             {bottomRow.map((seat) => renderChairNode(seat, 'bottom'))}
           </div>
@@ -605,9 +658,6 @@ export const VisualTableCanvas: React.FC<VisualTableCanvasProps> = ({
 
   // LAYOUT 2: GRAND OVAL
   const renderGrandOvalTable = () => {
-    const topRow = seats.slice(0, halfSeats);
-    const bottomRow = seats.slice(halfSeats, totalSeats);
-
     return (
       <div className="w-full overflow-x-auto pb-4 pt-2">
         <div className={`mx-auto flex flex-col items-center py-4 px-2 ${
@@ -617,7 +667,7 @@ export const VisualTableCanvas: React.FC<VisualTableCanvasProps> = ({
             className={`grid gap-1 sm:gap-2 w-full mb-2 ${
               scaleMode === 'normal' ? 'max-w-[1200px]' : 'max-w-[1140px]'
             }`}
-            style={{ gridTemplateColumns: `repeat(${topRow.length}, minmax(0, 1fr))` }}
+            style={{ gridTemplateColumns: `repeat(${Math.max(topRow.length, 1)}, minmax(0, 1fr))` }}
           >
             {topRow.map((seat) => renderChairNode(seat, 'top'))}
           </div>
@@ -625,14 +675,14 @@ export const VisualTableCanvas: React.FC<VisualTableCanvasProps> = ({
           <div className="w-full max-w-[1140px] rounded-full bg-[#433024] p-4 sm:p-6 border-2 sm:border-4 border-[#2E2018] shadow-md relative flex flex-col items-center justify-center">
             <div
               className="w-full grid gap-1 sm:gap-2 mb-3"
-              style={{ gridTemplateColumns: `repeat(${topRow.length}, minmax(0, 1fr))` }}
+              style={{ gridTemplateColumns: `repeat(${Math.max(topRow.length, 1)}, minmax(0, 1fr))` }}
             >
               {topRow.map((seat) => renderPlaceSetting(seat))}
             </div>
             <div className="my-1 sm:my-2">{renderTableCenterpiece()}</div>
             <div
               className="w-full grid gap-1 sm:gap-2 mt-3"
-              style={{ gridTemplateColumns: `repeat(${bottomRow.length}, minmax(0, 1fr))` }}
+              style={{ gridTemplateColumns: `repeat(${Math.max(bottomRow.length, 1)}, minmax(0, 1fr))` }}
             >
               {bottomRow.map((seat) => renderPlaceSetting(seat))}
             </div>
@@ -642,7 +692,7 @@ export const VisualTableCanvas: React.FC<VisualTableCanvasProps> = ({
             className={`grid gap-1 sm:gap-2 w-full mt-2 ${
               scaleMode === 'normal' ? 'max-w-[1200px]' : 'max-w-[1140px]'
             }`}
-            style={{ gridTemplateColumns: `repeat(${bottomRow.length}, minmax(0, 1fr))` }}
+            style={{ gridTemplateColumns: `repeat(${Math.max(bottomRow.length, 1)}, minmax(0, 1fr))` }}
           >
             {bottomRow.map((seat) => renderChairNode(seat, 'bottom'))}
           </div>
@@ -653,8 +703,8 @@ export const VisualTableCanvas: React.FC<VisualTableCanvasProps> = ({
 
   // LAYOUT 3: U-SHAPE
   const renderUShapeTable = () => {
-    const leftWing = seats.slice(0, halfSeats);
-    const rightWing = seats.slice(halfSeats, totalSeats);
+    const leftWing = topRow;
+    const rightWing = bottomRow;
 
     return (
       <div className="w-full overflow-x-auto pb-4 pt-2">
@@ -694,8 +744,8 @@ export const VisualTableCanvas: React.FC<VisualTableCanvasProps> = ({
 
   // LAYOUT 4: 2 TAVOLINA
   const renderDoubleBanquetTable = () => {
-    const tableA = seats.slice(0, halfSeats);
-    const tableB = seats.slice(halfSeats, totalSeats);
+    const tableA = topRow;
+    const tableB = bottomRow;
 
     const renderTable = (tSeats: Seat[], label: string) => {
       const topHalf = Math.ceil(tSeats.length / 2);
@@ -858,47 +908,71 @@ export const VisualTableCanvas: React.FC<VisualTableCanvasProps> = ({
                 type="text"
                 value={removeInput}
                 onChange={(e) => setRemoveInput(e.target.value)}
-                placeholder="Shkruaj numrin p.sh. 5 ose emrin..."
+                placeholder="Shkruaj numrin p.sh. 05 ose emrin..."
                 className="px-3 py-1.5 rounded-lg border border-[#D6CFC2] bg-[#FAF8F5] text-xs text-[#1C1917] placeholder:text-[#A8A29E] focus:outline-none focus:border-[#DC2626] focus:bg-white w-52 sm:w-64 transition-colors"
               />
               <button
                 type="submit"
-                className="px-3.5 py-1.5 rounded-lg bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-2xs whitespace-nowrap"
+                className="px-3.5 py-1.5 rounded-lg bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-2xs whitespace-nowrap cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Hiq nga Tavolina</span>
               </button>
             </div>
             <span className="text-[11px] text-[#78716C] hidden lg:inline">
-              (Shkruani numrin si <strong>5</strong> ose emrin e mysafirit dhe largohet menjëherë nga skema)
+              (Shkruani p.sh. <strong>05</strong> ose klikoni shportën 🗑️ direkt te karriga)
             </span>
           </form>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {onAddSeat && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onAddSeat('top')}
+                  title="Shto karrige në anën e sipërme (Lart)"
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#BBF7D0] bg-[#F0FDF4] hover:bg-[#DCFCE7] text-xs font-semibold text-[#166534] transition-colors whitespace-nowrap shadow-2xs cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5 text-[#16A34A]" />
+                  <span>+ Shto Lart</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onAddSeat('bottom')}
+                  title="Shto karrige në anën e poshtme (Poshtë)"
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#BBF7D0] bg-[#F0FDF4] hover:bg-[#DCFCE7] text-xs font-semibold text-[#166534] transition-colors whitespace-nowrap shadow-2xs cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5 text-[#16A34A]" />
+                  <span>+ Shto Poshtë</span>
+                </button>
+              </>
+            )}
+            {onRenumberSeats && (
               <button
                 type="button"
-                onClick={onAddSeat}
-                title="Shto një karrige tjetër në tavolinë"
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#D6CFC2] bg-white hover:bg-[#FAF8F5] text-xs font-semibold text-[#1C1917] transition-colors whitespace-nowrap shadow-2xs"
+                onClick={onRenumberSeats}
+                title="Rinumëro të gjitha karriget me radhë 1..N"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#D6CFC2] bg-[#FAF8F5] hover:bg-white text-xs font-semibold text-[#57534E] hover:text-[#1C1917] transition-colors whitespace-nowrap cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5 text-[#16A34A]" />
-                <span>+ Shto Karrige</span>
+                <span>Rinumëro (1..N)</span>
               </button>
             )}
-            {onResetSeats && seats.length !== 20 && (
+            {onResetSeats && (
               <button
                 type="button"
                 onClick={onResetSeats}
-                title="Rikthe tavolinën e plotë me 20 karrige"
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#D6CFC2] bg-[#FAF8F5] hover:bg-white text-xs font-semibold text-[#78716C] hover:text-[#1C1917] transition-colors whitespace-nowrap"
+                title="Rikthe tavolinën e plotë me 20 karrige (10 lart dhe 10 poshtë)"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#D6CFC2] bg-[#FAF8F5] hover:bg-white text-xs font-semibold text-[#78716C] hover:text-[#1C1917] transition-colors whitespace-nowrap cursor-pointer"
               >
-                <span>Rikthe 20 Karriget</span>
+                <span>Rikthe 20 (10 me 10)</span>
               </button>
             )}
-            <span className="text-xs font-mono font-bold text-[#1C1917] bg-[#FAF8F5] px-2.5 py-1 rounded-lg border border-[#E6E1DA] tabular-nums whitespace-nowrap">
-              {seats.length} karrige gjithsej
-            </span>
+            <div className="text-xs font-mono font-bold text-[#1C1917] bg-[#FAF8F5] px-2.5 py-1.5 rounded-lg border border-[#E6E1DA] tabular-nums whitespace-nowrap flex items-center gap-1.5">
+              <span className="text-[#9F2B2B]">{topRow.length} Lart</span>
+              <span>·</span>
+              <span className="text-[#1C1917]">{bottomRow.length} Poshtë</span>
+              <span className="text-[#78716C]">({seats.length} total)</span>
+            </div>
           </div>
         </div>
       )}

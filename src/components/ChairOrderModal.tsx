@@ -63,11 +63,12 @@ export const ChairOrderModal: React.FC<ChairOrderModalProps> = ({
   if (!currentSeat) return null;
 
   const totalSeats = allSeats.length;
-  const halfSeats = Math.ceil(totalSeats / 2);
-  const positionText =
-    currentSeat.id <= halfSeats
-      ? `Ana e Sipërme (Karriga ${currentSeat.id} nga ${halfSeats})`
-      : `Ana e Poshtme (Karriga ${currentSeat.id - halfSeats} nga ${totalSeats - halfSeats})`;
+  const isTop = currentSeat.side ? currentSeat.side === 'top' : currentSeat.id <= 10;
+  const topCount = allSeats.filter((s) => (s.side ? s.side === 'top' : s.id <= 10)).length;
+  const bottomCount = allSeats.filter((s) => (s.side ? s.side === 'bottom' : s.id > 10)).length;
+  const positionText = isTop
+    ? `Ana e Sipërme (Lart) · Karriga #${String(currentSeat.id).padStart(2, '0')} (${topCount} karrige lart)`
+    : `Ana e Poshtme (Poshtë) · Karriga #${String(currentSeat.id).padStart(2, '0')} (${bottomCount} karrige poshtë)`;
 
   const drinksList = currentSeat.drinks || [];
   const dishesList = currentSeat.dishes || [];

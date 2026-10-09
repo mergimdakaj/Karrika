@@ -25,6 +25,7 @@ export interface Seat {
   confirmed: boolean;
   drinks: OrderItem[];
   dishes: OrderItem[];
+  side?: 'top' | 'bottom';
 }
 
 export interface EventDetails {
@@ -175,6 +176,7 @@ export function getSampleSeats(count: number = 20): Seat[] {
 
     return {
       id,
+      side: (idx < Math.ceil(count / 2) ? 'top' : 'bottom') as 'top' | 'bottom',
       name,
       role,
       dietary,
@@ -189,6 +191,7 @@ export function getSampleSeats(count: number = 20): Seat[] {
 export function createEmptySeats(count: number = 20): Seat[] {
   return Array.from({ length: count }, (_, idx) => ({
     id: idx + 1,
+    side: (idx < Math.ceil(count / 2) ? 'top' : 'bottom') as 'top' | 'bottom',
     name: '',
     role: idx === 0 ? 'festari' : 'miqte',
     dietary: 'klasike',
