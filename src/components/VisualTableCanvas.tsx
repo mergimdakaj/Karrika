@@ -22,6 +22,8 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
+  Trash2,
+  Plus,
 } from 'lucide-react';
 
 interface VisualTableCanvasProps {
@@ -42,6 +44,9 @@ interface VisualTableCanvasProps {
   onClearSeat: (id: number) => void;
   onOpenOrderModal: (id: number) => void;
   onSaveFormat?: () => void;
+  onRemoveSeat?: (target: string | number) => boolean;
+  onAddSeat?: () => void;
+  onResetSeats?: () => void;
 }
 
 const ROLE_ACCENT_STYLES: Record<
@@ -98,11 +103,24 @@ export const VisualTableCanvas: React.FC<VisualTableCanvasProps> = ({
   onClearSeat,
   onOpenOrderModal,
   onSaveFormat,
+  onRemoveSeat,
+  onAddSeat,
+  onResetSeats,
 }) => {
   const inputRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const [draggedSeatId, setDraggedSeatId] = React.useState<number | null>(null);
   const [dragOverSeatId, setDragOverSeatId] = React.useState<number | null>(null);
   const [scaleMode, setScaleMode] = React.useState<'photo' | 'compact' | 'normal'>('photo');
+  const [removeInput, setRemoveInput] = React.useState('');
+
+  const handleRemoveSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!removeInput.trim()) return;
+    const success = onRemoveSeat?.(removeInput.trim());
+    if (success) {
+      setRemoveInput('');
+    }
+  };
 
   const totalSeats = seats.length;
   const halfSeats = Math.ceil(totalSeats / 2);
@@ -308,6 +326,19 @@ export const VisualTableCanvas: React.FC<VisualTableCanvasProps> = ({
                   className="p-0.5 rounded text-[#78716C] opacity-0 group-hover:opacity-100 hover:text-[#DC2626] hover:bg-[#FEF2F2] transition-colors"
                 >
                   <X className="w-3 h-3" />
+                </button>
+              )}
+              {onRemoveSeat && (
+                <button
+                  type="button"
+                  title={`Hiq Karrigen #${seat.id} nga tavolina`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveSeat(seat.id);
+                  }}
+                  className="p-0.5 rounded text-[#78716C] opacity-0 group-hover:opacity-100 hover:text-[#DC2626] hover:bg-[#FEF2F2] transition-colors"
+                >
+                  <Trash2 className="w-3 h-3 text-[#DC2626]" />
                 </button>
               )}
               {isEmpty && (
@@ -813,6 +844,64 @@ export const VisualTableCanvas: React.FC<VisualTableCanvasProps> = ({
           )}
         </div>
       </div>
+
+      {/* Remove Chair by Typing Form Toolbar */}
+      {onRemoveSeat && (
+        <div className="no-print mb-3 flex flex-wrap items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl bg-white border border-[#E6E1DA] shadow-xs">
+          <form onSubmit={handleRemoveSubmit} className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-bold text-[#1C1917] flex items-center gap-1.5 mr-1">
+              <Trash2 className="w-4 h-4 text-[#DC2626]" />
+              <span>Hiq Karrige nga Skema:</span>
+            </span>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="text"
+                value={removeInput}
+                onChange={(e) => setRemoveInput(e.target.value)}
+                placeholder="Shkruaj numrin p.sh. 5 ose emrin..."
+                className="px-3 py-1.5 rounded-lg border border-[#D6CFC2] bg-[#FAF8F5] text-xs text-[#1C1917] placeholder:text-[#A8A29E] focus:outline-none focus:border-[#DC2626] focus:bg-white w-52 sm:w-64 transition-colors"
+              />
+              <button
+                type="submit"
+                className="px-3.5 py-1.5 rounded-lg bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-2xs whitespace-nowrap"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Hiq nga Tavolina</span>
+              </button>
+            </div>
+            <span className="text-[11px] text-[#78716C] hidden lg:inline">
+              (Shkruani numrin si <strong>5</strong> ose emrin e mysafirit dhe largohet menjëherë nga skema)
+            </span>
+          </form>
+
+          <div className="flex items-center gap-2">
+            {onAddSeat && (
+              <button
+                type="button"
+                onClick={onAddSeat}
+                title="Shto një karrige tjetër në tavolinë"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#D6CFC2] bg-white hover:bg-[#FAF8F5] text-xs font-semibold text-[#1C1917] transition-colors whitespace-nowrap shadow-2xs"
+              >
+                <Plus className="w-3.5 h-3.5 text-[#16A34A]" />
+                <span>+ Shto Karrige</span>
+              </button>
+            )}
+            {onResetSeats && seats.length !== 20 && (
+              <button
+                type="button"
+                onClick={onResetSeats}
+                title="Rikthe tavolinën e plotë me 20 karrige"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#D6CFC2] bg-[#FAF8F5] hover:bg-white text-xs font-semibold text-[#78716C] hover:text-[#1C1917] transition-colors whitespace-nowrap"
+              >
+                <span>Rikthe 20 Karriget</span>
+              </button>
+            )}
+            <span className="text-xs font-mono font-bold text-[#1C1917] bg-[#FAF8F5] px-2.5 py-1 rounded-lg border border-[#E6E1DA] tabular-nums whitespace-nowrap">
+              {seats.length} karrige gjithsej
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Main Floorplan Container */}
       <div className="rounded-2xl bg-[#F4F1EA] border border-[#E6E1DA] p-3 sm:p-5">

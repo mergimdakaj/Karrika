@@ -40,7 +40,7 @@ try {
 }
 
 export default function App() {
-  const [capacity, setCapacity] = useState<18 | 20>(20);
+  const [capacity, setCapacity] = useState<number>(20);
 
   const [eventDetails, setEventDetails] = useState<EventDetails>(() => {
     try {
@@ -59,7 +59,7 @@ export default function App() {
       const saved = localStorage.getItem(STORAGE_SEATS_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && (parsed.length === 18 || parsed.length === 20)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed;
         }
       }
@@ -287,6 +287,84 @@ export default function App() {
     } catch {
       setSaveStatusMessage('⚠️ Gabim gjatë ruajtjes.');
     }
+  };
+
+  const handleRemoveSeat = (target: string | number): boolean => {
+    let seatToRemove: Seat | undefined;
+
+    if (typeof target === 'number') {
+      seatToRemove = seats.find((s) => s.id === target);
+    } else {
+      const trimmed = target.trim();
+      if (!trimmed) {
+        setSaveStatusMessage('⚠️ Ju lutem shkruani numrin e karriges ose emrin.');
+        setTimeout(() => setSaveStatusMessage(null), 3000);
+        return false;
+      }
+      const numOnly = parseInt(trimmed.replace(/\D/g, ''), 10);
+      if (!isNaN(numOnly) && seats.some((s) => s.id === numOnly)) {
+        seatToRemove = seats.find((s) => s.id === numOnly);
+      } else {
+        const lower = trimmed.toLowerCase();
+        seatToRemove = seats.find((s) => s.name.trim().toLowerCase().includes(lower));
+      }
+    }
+
+    if (!seatToRemove) {
+      setSaveStatusMessage(`⚠️ Karriga "${target}" nuk u gjet në skemë.`);
+      setTimeout(() => setSaveStatusMessage(null), 3500);
+      return false;
+    }
+
+    if (seats.length <= 2) {
+      setSaveStatusMessage('⚠️ Tavolina duhet të ketë së paku 2 karrige.');
+      setTimeout(() => setSaveStatusMessage(null), 3500);
+      return false;
+    }
+
+    const removedId = seatToRemove.id;
+    const removedName = seatToRemove.name.trim() ? ` (${seatToRemove.name})` : '';
+
+    setSeats((prev) => {
+      const remaining = prev.filter((s) => s.id !== removedId);
+      return remaining.map((s, idx) => ({ ...s, id: idx + 1 }));
+    });
+
+    setSelectedSeatId((prevId) => {
+      if (prevId === removedId) return 1;
+      if (prevId > removedId) return prevId - 1;
+      return prevId;
+    });
+
+    setSaveStatusMessage(`✓ Karriga #${removedId}${removedName} u hoq nga skema vizuale! Mbetën ${seats.length - 1} karrige.`);
+    setTimeout(() => setSaveStatusMessage(null), 3500);
+    return true;
+  };
+
+  const handleAddSeat = () => {
+    setSeats((prev) => {
+      const newId = prev.length + 1;
+      const newSeat: Seat = {
+        id: newId,
+        name: '',
+        role: 'miqte',
+        dietary: 'klasike',
+        note: '',
+        confirmed: false,
+        drinks: [],
+        dishes: [],
+      };
+      return [...prev, newSeat];
+    });
+    setSaveStatusMessage(`✓ U shtua një karrige e re! Gjithsej ${seats.length + 1} karrige.`);
+    setTimeout(() => setSaveStatusMessage(null), 3000);
+  };
+
+  const handleResetTo20Seats = () => {
+    setSeats(getSampleSeats(20));
+    setSelectedSeatId(1);
+    setSaveStatusMessage('✓ U rikthyen të 20 karriget e plota.');
+    setTimeout(() => setSaveStatusMessage(null), 3000);
   };
 
   const handleAddDrinkToAll = (drink: { name: string; price: number }) => {
@@ -690,6 +768,9 @@ export default function App() {
               onClearSeat={handleClearSeat}
               onOpenOrderModal={handleOpenOrderModal}
               onSaveFormat={handleSaveFormat}
+              onRemoveSeat={handleRemoveSeat}
+              onAddSeat={handleAddSeat}
+              onResetSeats={handleResetTo20Seats}
             />
 
             {/* Bottom Controls: Seat Inspector */}
@@ -707,6 +788,7 @@ export default function App() {
                 onClearSeatOrder={handleClearSeatOrder}
                 onClearAllOrders={handleClearAllOrders}
                 onSaveFormat={handleSaveFormat}
+                onRemoveSeat={handleRemoveSeat}
               />
             </div>
           </div>

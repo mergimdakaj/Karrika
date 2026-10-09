@@ -32,7 +32,7 @@ export interface EventDetails {
   celebrant: string;
   date: string;
   venue: string;
-  capacity: 18 | 20;
+  capacity: number;
   tableShape: TableShape;
   centerpiece: CenterpieceTheme;
   generalNotes: string;
@@ -135,7 +135,7 @@ export const ALL_SAMPLE_NAMES = [
   'Vlera Kelmendi',
 ];
 
-export function getSampleSeats(count: 18 | 20): Seat[] {
+export function getSampleSeats(count: number = 20): Seat[] {
   return Array.from({ length: count }, (_, idx) => {
     const id = idx + 1;
     const name = ALL_SAMPLE_NAMES[idx] || '';
@@ -186,7 +186,7 @@ export function getSampleSeats(count: 18 | 20): Seat[] {
   });
 }
 
-export function createEmptySeats(count: 18 | 20): Seat[] {
+export function createEmptySeats(count: number = 20): Seat[] {
   return Array.from({ length: count }, (_, idx) => ({
     id: idx + 1,
     name: '',

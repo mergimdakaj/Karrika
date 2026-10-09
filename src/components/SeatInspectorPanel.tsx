@@ -38,6 +38,7 @@ interface SeatInspectorPanelProps {
   onClearSeatOrder?: (id: number) => void;
   onClearAllOrders?: () => void;
   onSaveFormat?: () => void;
+  onRemoveSeat?: (target: string | number) => boolean;
 }
 
 export const SeatInspectorPanel: React.FC<SeatInspectorPanelProps> = ({
@@ -53,6 +54,7 @@ export const SeatInspectorPanel: React.FC<SeatInspectorPanelProps> = ({
   onClearSeatOrder,
   onClearAllOrders,
   onSaveFormat,
+  onRemoveSeat,
 }) => {
   const [swapTargetId, setSwapTargetId] = useState<number>(
     seat.id === 1 ? 2 : 1
@@ -323,6 +325,19 @@ export const SeatInspectorPanel: React.FC<SeatInspectorPanelProps> = ({
               className="p-2.5 rounded-xl border border-[#E6E1DA] text-[#78716C] hover:text-[#DC2626] hover:border-[#FECACA] hover:bg-[#FEF2F2] transition-colors shrink-0"
             >
               <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+
+          {onRemoveSeat && (
+            <button
+              type="button"
+              onClick={() => onRemoveSeat(seat.id)}
+              title={`Hiq Karrigen #${seat.id} nga skema e tavolinës`}
+              className="p-2.5 rounded-xl border border-[#FCA5A5] bg-[#FEF2F2] text-[#DC2626] hover:bg-[#FEE2E2] transition-colors shrink-0 flex items-center gap-1.5 text-xs font-semibold"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Hiq Karrigen #{seat.id}</span>
+              <span className="sm:hidden">Hiq</span>
             </button>
           )}
         </div>
