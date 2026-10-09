@@ -22,6 +22,7 @@ import {
   Sparkles,
   Receipt,
   Copy,
+  Save,
 } from 'lucide-react';
 
 interface SeatInspectorPanelProps {
@@ -34,6 +35,9 @@ interface SeatInspectorPanelProps {
   onAddDrinkToAll?: (drink: { name: string; price: number }) => void;
   onCopyOrderToAll?: (sourceSeat: Seat) => void;
   onOpenOrderModal?: (id: number) => void;
+  onClearSeatOrder?: (id: number) => void;
+  onClearAllOrders?: () => void;
+  onSaveFormat?: () => void;
 }
 
 export const SeatInspectorPanel: React.FC<SeatInspectorPanelProps> = ({
@@ -46,6 +50,9 @@ export const SeatInspectorPanel: React.FC<SeatInspectorPanelProps> = ({
   onAddDrinkToAll,
   onCopyOrderToAll,
   onOpenOrderModal,
+  onClearSeatOrder,
+  onClearAllOrders,
+  onSaveFormat,
 }) => {
   const [swapTargetId, setSwapTargetId] = useState<number>(
     seat.id === 1 ? 2 : 1
@@ -294,6 +301,20 @@ export const SeatInspectorPanel: React.FC<SeatInspectorPanelProps> = ({
             placeholder="Shkruani emrin e mysafirit..."
             className="w-full px-3.5 py-2 rounded-xl border border-[#D6CFC2] bg-[#FAF8F5] text-sm font-medium text-[#1C1917] placeholder:text-[#A8A29E] focus:outline-none focus:border-[#9F2B2B] focus:bg-white transition-colors"
           />
+
+          {onSaveFormat && (
+            <button
+              type="button"
+              onClick={onSaveFormat}
+              title="Ruaj formatin dhe të gjithë emrat"
+              className="px-3 py-2 rounded-xl bg-[#1C1917] hover:bg-[#332E28] text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow-xs transition-colors"
+            >
+              <Save className="w-3.5 h-3.5 text-[#D4AF37]" />
+              <span className="hidden sm:inline">Ruaj Formatin</span>
+              <span className="sm:hidden">Ruaj</span>
+            </button>
+          )}
+
           {seat.name.trim() && (
             <button
               type="button"
@@ -555,33 +576,69 @@ export const SeatInspectorPanel: React.FC<SeatInspectorPanelProps> = ({
             </div>
           </div>
         )}
+        {/* Clear current seat orders button */}
+        {onClearSeatOrder && (drinksList.length > 0 || dishesList.length > 0) && (
+          <div className="pt-2 flex justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                onClearSeatOrder(seat.id);
+                showNotice(`U fshinë të gjitha porositë për Karrigen #${seat.id}`);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#FCA5A5] bg-[#FEF2F2] hover:bg-[#FEE2E2] text-xs font-semibold text-[#DC2626] transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-[#DC2626]" />
+              <span>Fshi Porositë e Kësaj Karrigeje</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* GRAND TOTAL BILL (FAKTURA GJITHSEJ - ÇDO PIJE E SHTUAR SHKON KËTU) */}
-      <div className="rounded-xl bg-[#1C1917] text-white p-4 flex flex-wrap items-center justify-between gap-3 shadow-sm border border-[#332E28]">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-[#D4AF37] uppercase tracking-wider font-bold block">
-              FAKTURA GJITHSEJ (TAVOLINA)
-            </span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#332E28] text-[#D6CFC2] font-mono">
-              {allSeats.length} karrige
+      <div className="rounded-xl bg-[#1C1917] text-white p-4 space-y-3 shadow-sm border border-[#332E28]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-[#D4AF37] uppercase tracking-wider font-bold block">
+                FAKTURA GJITHSEJ (TAVOLINA)
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#332E28] text-[#D6CFC2] font-mono">
+                {allSeats.length} karrige
+              </span>
+            </div>
+            <div className="text-xs text-[#D6CFC2] mt-1 flex flex-wrap items-center gap-2">
+              <span className="text-[#93C5FD] font-semibold">{totalDrinksAll} pije</span>
+              <span className="text-[#78716C]">·</span>
+              <span className="text-[#FCA5A5] font-semibold">{totalDishesAll} ushqime</span>
+              <span className="text-[#78716C]">·</span>
+              <span className="text-[#D6CFC2]">Çdo pije & ushqim llogaritet automatikisht</span>
+            </div>
+          </div>
+          <div className="text-right pl-3 shrink-0">
+            <span className="text-[10px] text-[#A8A29E] block uppercase font-semibold">GJITHSEJ ÇMIMI</span>
+            <span className="font-mono text-2xl font-bold tabular-nums text-[#D4AF37]">
+              {grandTotal.toFixed(2)} €
             </span>
           </div>
-          <div className="text-xs text-[#D6CFC2] mt-1 flex flex-wrap items-center gap-2">
-            <span className="text-[#93C5FD] font-semibold">{totalDrinksAll} pije</span>
-            <span className="text-[#78716C]">·</span>
-            <span className="text-[#FCA5A5] font-semibold">{totalDishesAll} ushqime</span>
-            <span className="text-[#78716C]">·</span>
-            <span className="text-[#D6CFC2]">Çdo pije & ushqim llogaritet automatikisht</span>
+        </div>
+
+        {/* Clear All Orders in Bill */}
+        {onClearAllOrders && grandTotal > 0 && (
+          <div className="pt-2.5 border-t border-[#332E28] flex items-center justify-between gap-2">
+            <span className="text-[11px] text-[#A8A29E]">Dëshironi të fshini të gjitha shpenzimet?</span>
+            <button
+              type="button"
+              onClick={() => {
+                onClearAllOrders();
+                showNotice('Fatura u fshi! Të gjitha porositë u pastruan.');
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#332E28] hover:bg-[#DC2626] text-[#FCA5A5] hover:text-white text-xs font-semibold transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-[#EF4444]" />
+              <span>Fshi Faturën (Pastro)</span>
+            </button>
           </div>
-        </div>
-        <div className="text-right pl-3 shrink-0">
-          <span className="text-[10px] text-[#A8A29E] block uppercase font-semibold">GJITHSEJ ÇMIMI</span>
-          <span className="font-mono text-2xl font-bold tabular-nums text-[#D4AF37]">
-            {grandTotal.toFixed(2)} €
-          </span>
-        </div>
+        )}
       </div>
 
       {/* QUICK BATCH TOOLS */}

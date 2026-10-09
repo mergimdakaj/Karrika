@@ -33,6 +33,8 @@ interface ChairOrderModalProps {
   onUpdateSeat: (id: number, patch: Partial<Seat>) => void;
   onAddDrinkToAll?: (drink: { name: string; price: number }) => void;
   onCopyOrderToAll?: (sourceSeat: Seat) => void;
+  onClearSeatOrder?: (id: number) => void;
+  onClearAllOrders?: () => void;
 }
 
 export const ChairOrderModal: React.FC<ChairOrderModalProps> = ({
@@ -44,6 +46,8 @@ export const ChairOrderModal: React.FC<ChairOrderModalProps> = ({
   onUpdateSeat,
   onAddDrinkToAll,
   onCopyOrderToAll,
+  onClearSeatOrder,
+  onClearAllOrders,
 }) => {
   const [customDishName, setCustomDishName] = useState('');
   const [customDishPrice, setCustomDishPrice] = useState('');
@@ -703,6 +707,34 @@ export const ChairOrderModal: React.FC<ChairOrderModalProps> = ({
                 >
                   <Users className="w-3.5 h-3.5 text-[#9F2B2B]" />
                   <span>Kopjo këtë porosi për të gjithë ({totalSeats} vende)</span>
+                </button>
+              )}
+
+              {onClearSeatOrder && (drinksList.length > 0 || dishesList.length > 0) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClearSeatOrder(currentSeat.id);
+                    showToast(`U fshinë porositë për Karrigen #${currentSeat.id}!`);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#FCA5A5] bg-[#FEF2F2] hover:bg-[#FEE2E2] text-xs font-semibold text-[#DC2626] transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-[#DC2626]" />
+                  <span>Fshi Porosinë e Karriges #{currentSeat.id}</span>
+                </button>
+              )}
+
+              {onClearAllOrders && grandTotal > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClearAllOrders();
+                    showToast('Fatura e të gjithë tavolinës u fshi!');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#FCA5A5] bg-[#FEF2F2] hover:bg-[#FEE2E2] text-xs font-semibold text-[#DC2626] transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-[#DC2626]" />
+                  <span>Fshi Gjithë Faturën (Pastro)</span>
                 </button>
               )}
             </div>

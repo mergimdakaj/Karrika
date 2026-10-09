@@ -12,6 +12,9 @@ import {
   Receipt,
   CreditCard,
   Crown,
+  Trash2,
+  Save,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface BillSummaryViewProps {
@@ -21,6 +24,9 @@ interface BillSummaryViewProps {
   onAddDrinkToAll: (drink: { name: string; price: number }) => void;
   onPrint: () => void;
   onOpenOrderModal?: (id: number) => void;
+  onClearSeatOrder?: (id: number) => void;
+  onClearAllOrders?: () => void;
+  onSaveFormat?: () => void;
 }
 
 export const BillSummaryView: React.FC<BillSummaryViewProps> = ({
@@ -30,7 +36,11 @@ export const BillSummaryView: React.FC<BillSummaryViewProps> = ({
   onAddDrinkToAll,
   onPrint,
   onOpenOrderModal,
+  onClearSeatOrder,
+  onClearAllOrders,
+  onSaveFormat,
 }) => {
+  const [showClearConfirm, setShowClearConfirm] = React.useState(false);
   const totalSeats = seats.length;
 
   const totalDrinksCost = seats.reduce((acc, s) => {
@@ -60,7 +70,18 @@ export const BillSummaryView: React.FC<BillSummaryViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {onSaveFormat && (
+            <button
+              type="button"
+              onClick={onSaveFormat}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#D4AF37]/50 bg-[#FFFDF9] hover:bg-white text-xs font-semibold text-[#8C6227] transition-colors shadow-xs"
+            >
+              <Save className="w-3.5 h-3.5 text-[#B4833E]" />
+              <span>Ruaj Formatin</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => onAddDrinkToAll({ name: 'Cola', price: 1.8 })}
@@ -77,6 +98,19 @@ export const BillSummaryView: React.FC<BillSummaryViewProps> = ({
             <span>🍺</span>
             <span>+ Birra (2.00 €)</span>
           </button>
+
+          {onClearAllOrders && (
+            <button
+              type="button"
+              onClick={() => setShowClearConfirm(true)}
+              disabled={grandTotal === 0}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#FCA5A5] bg-[#FEF2F2] hover:bg-[#FEE2E2] disabled:opacity-50 disabled:hover:bg-[#FEF2F2] text-xs font-semibold text-[#DC2626] transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-[#DC2626]" />
+              <span>Fshi Faturën</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onPrint}
@@ -164,7 +198,8 @@ export const BillSummaryView: React.FC<BillSummaryViewProps> = ({
                 <th className="py-3 px-3 min-w-[240px]">Ushqimi / Pjatat (Çmimi)</th>
                 <th className="py-3 px-3 text-right w-24">Pijet €</th>
                 <th className="py-3 px-3 text-right w-24">Ushqimi €</th>
-                <th className="py-3 pl-3 pr-6 text-right w-28">Shuma Total</th>
+                <th className="py-3 pl-3 pr-3 text-right w-28">Shuma Total</th>
+                {onClearSeatOrder && <th className="py-3 px-3 text-center w-20 no-print">Veprime</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EFECE6] text-xs">
@@ -175,6 +210,7 @@ export const BillSummaryView: React.FC<BillSummaryViewProps> = ({
                 const fSub = dishes.reduce((acc, d) => acc + (d.price * d.quantity), 0);
                 const sTotal = dSub + fSub;
                 const isFestari = seat.role === 'festari';
+                const hasOrders = drinks.length > 0 || dishes.length > 0;
 
                 return (
                   <tr
@@ -248,9 +284,30 @@ export const BillSummaryView: React.FC<BillSummaryViewProps> = ({
                       {fSub.toFixed(2)} €
                     </td>
 
-                    <td className="py-3 pl-3 pr-6 text-right font-mono tabular-nums font-bold text-[#1C1917]">
+                    <td className="py-3 pl-3 pr-3 text-right font-mono tabular-nums font-bold text-[#1C1917]">
                       {sTotal.toFixed(2)} €
                     </td>
+
+                    {onClearSeatOrder && (
+                      <td className="py-3 px-3 text-center no-print">
+                        {hasOrders ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onClearSeatOrder(seat.id);
+                            }}
+                            title={`Fshi porositë për Karrigen #${seat.id}`}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[#DC2626] hover:bg-[#FEF2F2] border border-transparent hover:border-[#FCA5A5] transition-colors text-xs font-semibold"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Fshi</span>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-[#D6CFC2]">—</span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -266,14 +323,62 @@ export const BillSummaryView: React.FC<BillSummaryViewProps> = ({
                 <td className="py-3 px-3 text-right font-mono tabular-nums text-[#8C6227]">
                   {totalDishesCost.toFixed(2)} €
                 </td>
-                <td className="py-3 pl-3 pr-6 text-right font-mono tabular-nums text-base text-[#1C1917]">
+                <td className="py-3 pl-3 pr-3 text-right font-mono tabular-nums text-base text-[#1C1917]">
                   {grandTotal.toFixed(2)} €
                 </td>
+                {onClearSeatOrder && <td className="no-print"></td>}
               </tr>
             </tfoot>
           </table>
         </div>
       </div>
+
+      {/* Confirmation Modal for Clearing All Orders */}
+      {showClearConfirm && onClearAllOrders && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[#E6E1DA] animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3 text-[#DC2626] mb-3">
+              <div className="w-10 h-10 rounded-xl bg-[#FEF2F2] flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-[#DC2626]" />
+              </div>
+              <div>
+                <h3 className="font-display text-base font-bold text-[#1C1917]">
+                  Fshi të Gjithë Faturën?
+                </h3>
+                <span className="text-xs text-[#78716C]">
+                  Pastrohen të gjitha pijet dhe ushqimet
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-[#57534E] leading-relaxed mb-5">
+              A jeni të sigurt që dëshironi të fshini të gjitha porositë nga fatura e tavolinës?
+              Emrat e mysafirëve në karrige do të mbeten të pandryshuar.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowClearConfirm(false)}
+                className="px-4 py-2 rounded-xl border border-[#D6CFC2] text-xs font-semibold text-[#1C1917] hover:bg-[#FAF8F5] transition-colors"
+              >
+                Anulo
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onClearAllOrders();
+                  setShowClearConfirm(false);
+                }}
+                className="px-4 py-2 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-xs font-semibold text-white shadow-xs transition-colors flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Po, Fshi Faturën</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

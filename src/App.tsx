@@ -26,6 +26,7 @@ import {
   HardDrive,
   Upload,
   CheckCircle2,
+  Save,
 } from 'lucide-react';
 
 const STORAGE_SEATS_KEY = 'eventseat_planner_seats_v7';
@@ -261,6 +262,33 @@ export default function App() {
     );
   };
 
+  const handleClearSeatOrder = (id: number) => {
+    setSeats((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, drinks: [], dishes: [] } : s))
+    );
+    setSaveStatusMessage(`✓ U fshinë të gjitha porositë për Karrigen #${String(id).padStart(2, '0')}`);
+    setTimeout(() => setSaveStatusMessage(null), 3000);
+  };
+
+  const handleClearAllOrders = () => {
+    setSeats((prev) =>
+      prev.map((s) => ({ ...s, drinks: [], dishes: [] }))
+    );
+    setSaveStatusMessage('✓ Fatura u fshi! Të gjitha porositë u pastruan me sukses.');
+    setTimeout(() => setSaveStatusMessage(null), 3500);
+  };
+
+  const handleSaveFormat = () => {
+    try {
+      localStorage.setItem(STORAGE_SEATS_KEY, JSON.stringify(seats));
+      localStorage.setItem(STORAGE_EVENT_KEY, JSON.stringify(eventDetails));
+      setSaveStatusMessage('💾 Formati dhe të gjithë emrat u ruajtën me sukses!');
+      setTimeout(() => setSaveStatusMessage(null), 3500);
+    } catch {
+      setSaveStatusMessage('⚠️ Gabim gjatë ruajtjes.');
+    }
+  };
+
   const handleAddDrinkToAll = (drink: { name: string; price: number }) => {
     setSeats((prev) =>
       prev.map((s) => {
@@ -443,6 +471,18 @@ export default function App() {
             <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse" />
             <span>Ruhet automatikisht në faqe</span>
           </div>
+
+          {/* Ruaj Formatin & Emrat */}
+          <button
+            type="button"
+            onClick={handleSaveFormat}
+            title="Ruaj formatin dhe të gjithë emrat e tavolinës në shfletues"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1C1917] hover:bg-[#332E28] text-white text-xs font-semibold transition-colors whitespace-nowrap shadow-xs"
+          >
+            <Save className="w-3.5 h-3.5 text-[#D4AF37]" />
+            <span className="hidden sm:inline">Ruaj Formatin</span>
+            <span className="sm:hidden">Ruaj</span>
+          </button>
 
           {/* Ruaj në Hard Disk (Për GitHub) */}
           <button
@@ -649,6 +689,7 @@ export default function App() {
               onStartSwap={setSwapSourceId}
               onClearSeat={handleClearSeat}
               onOpenOrderModal={handleOpenOrderModal}
+              onSaveFormat={handleSaveFormat}
             />
 
             {/* Bottom Controls: Seat Inspector */}
@@ -663,6 +704,9 @@ export default function App() {
                 onAddDrinkToAll={handleAddDrinkToAll}
                 onCopyOrderToAll={handleCopyOrderToAll}
                 onOpenOrderModal={handleOpenOrderModal}
+                onClearSeatOrder={handleClearSeatOrder}
+                onClearAllOrders={handleClearAllOrders}
+                onSaveFormat={handleSaveFormat}
               />
             </div>
           </div>
@@ -696,6 +740,9 @@ export default function App() {
             onAddDrinkToAll={handleAddDrinkToAll}
             onPrint={handlePrint}
             onOpenOrderModal={handleOpenOrderModal}
+            onClearSeatOrder={handleClearSeatOrder}
+            onClearAllOrders={handleClearAllOrders}
+            onSaveFormat={handleSaveFormat}
           />
         )}
 
@@ -774,6 +821,8 @@ export default function App() {
         onUpdateSeat={handleUpdateSeat}
         onAddDrinkToAll={handleAddDrinkToAll}
         onCopyOrderToAll={handleCopyOrderToAll}
+        onClearSeatOrder={handleClearSeatOrder}
+        onClearAllOrders={handleClearAllOrders}
       />
 
       {/* Toast Notification for Disk Save / Load */}
